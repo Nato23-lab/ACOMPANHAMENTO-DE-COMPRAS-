@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Follow-up de Compras</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#ffffff; --text:#1a1d23; --muted:#6b7280; --border:#e5e7eb;
+  --accent:#4f46e5; --red:#dc2626; --amber:#d97706; --green:#16a34a; --slate:#64748b; --blue:#2563eb;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#14161c;--card:#1e2129;--text:#eceef1;--muted:#9aa1ad;--border:#2c3038;}
+}
+:root[data-theme="dark"]{--bg:#14161c;--card:#1e2129;--text:#eceef1;--muted:#9aa1ad;--border:#2c3038;}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.4rem;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:.85rem;margin-bottom:18px}
+.upload{border:2px dashed var(--border);border-radius:14px;padding:26px;text-align:center;background:var(--card);cursor:pointer}
+.upload:hover{border-color:var(--accent)}
+.upload input{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .1s}
+.card:hover{transform:translateY(-2px)}
+.card.active{outline:2px solid var(--accent)}
+.card .n{font-size:1.5rem;font-weight:700}
+.card .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.card .v{font-size:.72rem;color:var(--muted);margin-top:2px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}
+.xbtn{padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:.85rem}
+.xbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.ms{position:relative}
+.ms>button{padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:.85rem}
+.ms>button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.ms .panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:20;width:300px;max-width:88vw;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.ms.open .panel{display:block}
+.ms .panel input{width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:6px}
+.ms .acts{display:flex;gap:6px;margin-bottom:6px}
+.ms .acts button{flex:1;padding:5px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:.75rem}
+.ms .opts{max-height:260px;overflow-y:auto}
+.ms label{display:flex;gap:8px;align-items:center;padding:5px 6px;font-size:.8rem;cursor:pointer;border-radius:6px}
+.ms label:hover{background:color-mix(in srgb, var(--accent) 8%, transparent)}
+input#q{flex:1;min-width:180px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+select#sortSel{padding:9px 10px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+.tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.82rem;white-space:nowrap}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{position:sticky;top:0;background:var(--card);color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase}
+tr:last-child td{border-bottom:none}
+tr.main-row{cursor:pointer}
+tr.main-row:hover{background:color-mix(in srgb, var(--accent) 6%, transparent)}
+.chev{display:inline-block;transition:transform .15s;color:var(--muted);margin-right:6px}
+.chev.open{transform:rotate(90deg)}
+tr.detail-row td{padding:0;background:color-mix(in srgb, var(--text) 3%, transparent)}
+table.subtbl{width:100%;border-collapse:collapse;font-size:.78rem;table-layout:fixed}
+table.subtbl th{position:static;background:transparent;padding:6px 8px;text-align:left}
+table.subtbl td{padding:6px 8px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.subtbl th:not(:first-child),table.subtbl td:not(:first-child){text-align:right;width:110px}
+table.subtbl tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:600;color:#fff}
+.hint{color:var(--muted);font-size:.8rem;margin:8px 0}
+footer{color:var(--muted);font-size:.75rem;text-align:center;margin-top:24px}
+
+.tabs{display:flex;gap:6px;margin:6px 0 12px}
+.tabs button{padding:8px 16px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:.85rem}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+#dash{display:none}
+.dhead{background:linear-gradient(135deg,var(--accent),#7c3aed);color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.dhead h2{margin:0 0 4px;font-size:1.05rem}.dhead div{font-size:.8rem;opacity:.92}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.kpi .n{font-size:1.35rem;font-weight:700}.kpi .l{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.dcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.dcard h3{margin:0 0 10px;font-size:.9rem}
+.dcard .note{color:var(--muted);font-size:.72rem;margin-top:8px}
+.donutwrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.donut{width:150px;height:150px;border-radius:50%;position:relative;flex:none}
+.donut::after{content:attr(data-c);position:absolute;inset:26px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem}
+.leg{font-size:.78rem;display:grid;gap:5px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.brow{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;font-size:.76rem;margin:6px 0}
+.brow .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{display:flex;height:14px;background:color-mix(in srgb, var(--text) 8%, transparent);border-radius:7px;overflow:hidden}
+.track span{display:block;height:100%}
+.ins{margin:0;padding-left:18px;font-size:.82rem;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📦 Follow-up de Compras</h1>
+  <div class="sub">Faça upload da planilha de follow-up para atualizar. Nada é enviado a servidores — tudo roda no seu navegador.</div>
+
+  <label class="upload" id="dropZone">
+    <input type="file" id="file" accept=".xlsx,.xls">
+    <div id="dropTxt">📄 Clique ou arraste a planilha (.xlsx) aqui</div>
+  </label>
+  <div class="hint" id="status"></div>
+
+  <div id="app" style="display:none">
+    <div class="hint">Clique em um ou mais cards para combinar status. Ex.: Comprador = Diego + Atrasado + Recebida parcial.</div>
+    <div class="cards" id="cards"></div>
+    <div class="toolbar">
+      <div class="ms" id="msComp"></div>
+      <div class="ms" id="msForn"></div>
+      <input id="q" placeholder="Buscar por Ordem, fornecedor, comprador, material...">
+      <button id="clearSt" class="xbtn">Limpar status</button>
+      <button id="exportBtn" class="xbtn primary">⬇️ Exportar planilha</button>
+      <select id="sortSel">
+        <option value="prazo">Ordenar: prazo OC</option>
+        <option value="valor">Ordenar: valor</option>
+        <option value="ordem">Ordenar: nº ordem</option>
+      </select>
+    </div>
+    <div class="tabs"><button id="tabT" class="on">📋 Ordens</button><button id="tabD">📊 Dashboard</button></div>
+    <div id="dash"></div>
+    <div class="tblwrap" id="tblWrap">
+      <table>
+        <thead><tr>
+          <th>Ordem</th><th>Status</th><th>Fornecedor</th><th>Comprador</th><th>SC(s)</th>
+          <th>Itens</th><th>Aprovação ⚠️</th><th>Prazo OC</th><th>Dias</th><th>Valor (R$)</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<footer>Classificação: Regularização (NF) > Pendente de aprovação > Atrasado > Parcial em atraso > Parcial em prazo > Em prazo > Cancelada > Entregue. "Recebida total" é sempre considerado Entregue. 💰 Adiantamento é um filtro à parte (condição de pagamento com %, à vista, adiantamento ou pagamento antecipado), combinável com qualquer status.</footer>
+
+<script>
+const CLASS_DEF = {
+  regularizacao:{label:'Regularização (NF)',color:'#0891b2'},
+  verba:{label:'Pendente de aprovação',color:'#dc2626'},
+  atrasado:{label:'Atrasado',color:'#ea580c'},
+  parcial_atraso:{label:'Parcial em atraso',color:'#be185d'},
+  parcial_prazo:{label:'Parcial em prazo',color:'#7c3aed'},
+  andamento:{label:'Em prazo',color:'#2563eb'},
+  cancelada:{label:'Cancelada',color:'#64748b'},
+  entregue:{label:'Entregue',color:'#16a34a'}
+};
+const ORDER = ['regularizacao','verba','atrasado','parcial_atraso','parcial_prazo','andamento','cancelada','entregue'];
+const REGEX_ADIANT = /%|A VISTA|ADIANTAMENTO|ANTECIPAD/i;
+const isAdiantOpen = g => g.isAdiantamento && (g.cls==='verba'||g.cls==='atrasado'||g.cls==='andamento');
+
+let ordens = [];
+let semOcCount = 0;
+const activeFilter = new Set();
+let currentList = [];
+let advOnly = false;
+let expanded = new Set();
+let history = [];
+
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem('followupHistory')||'[]'); }catch(e){ return []; }
+}
+function saveSnapshot(){
+  const todayStr = new Date().toISOString().slice(0,10);
+  const counts = {}; ORDER.forEach(k=>counts[k]={n:0,v:0});
+  ordens.forEach(g=>{ counts[g.cls].n++; counts[g.cls].v+=g.valor; });
+  const valorRisco = (counts.atrasado?.v||0)+(counts.verba?.v||0)+(counts.parcial_atraso?.v||0);
+  const entPct = ordens.length ? Math.round(counts.entregue.n/ordens.length*100) : 0;
+  const snap = { date: todayStr, totalOrdens: ordens.length, totalValor: ordens.reduce((t,g)=>t+g.valor,0), counts, valorRisco, entPct };
+  let hist = loadHistory().filter(h=>h.date!==todayStr);
+  hist.push(snap);
+  hist.sort((a,b)=>a.date.localeCompare(b.date));
+  if(hist.length>60) hist = hist.slice(hist.length-60);
+  try{ localStorage.setItem('followupHistory', JSON.stringify(hist)); }catch(e){}
+  return hist;
+}
+let semOcItems = [];
+const sel = {comp:new Set(), forn:new Set()};
+const msSearch = {comp:'', forn:''};
+
+function parseBR(s){
+  if(!s) return null;
+  s = String(s).trim();
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return null;
+  if(m[3]==='0001') return null;
+  const d = new Date(+m[3], +m[2]-1, +m[1]);
+  return isNaN(d) ? null : d;
+}
+function fmt(d){ return d ? d.toLocaleDateString('pt-BR') : '—'; }
+function money(v){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function orderClass(g, today){
+  const items = g.items;
+  if(items.some(it => REGEX_NF.test(it.obs||''))) return 'regularizacao';
+  if(items.some(it => (it.controle||'').toUpperCase().includes('VERBA ULTRAPASSADA'))) return 'verba';
+  if(items.some(it => (it.controle||'').toUpperCase().includes('CANCELADA'))) return 'cancelada';
+  // recebida total conta como entregue mesmo que a situação do item não diga "LIQUIDADO" explicitamente
+  const isDelivered = it => (it.situacao||'').toUpperCase()==='LIQUIDADO' || (it.controle||'').toUpperCase().includes('RECEBIDA - TOTAL');
+  const liq = items.filter(isDelivered).length;
+  const prazo = parseBR(g.prazoOc);
+  const late = prazo && prazo < today;
+  if(liq === items.length) return 'entregue';            // todos os itens entregues
+  if(liq > 0) return late ? 'parcial_atraso' : 'parcial_prazo'; // mistura: alguns entregues, outros em aberto
+  return late ? 'atrasado' : 'andamento';                 // nenhum item entregue
+}
+
+function handleFile(file){
+  document.getElementById('status').textContent = 'Lendo planilha...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+      processRows(rows);
+    }catch(err){
+      document.getElementById('status').textContent = 'Erro ao ler o arquivo: ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Layout fixo do relatório "FOLLOW UP DE COMPRAS" (COD. REL 712)
+const COL = { sc:4, ordem:27, fornecedor:31, controle:33, situacao:34, comprador:35,
+  prazoOc:37, aprovacao:38, valor:19, material:12, quantidade:17, prUnit:18, obs:8, cond:29 };
+const REGEX_NF = /\bNF\b/i;
+
+function parseNum(s){
+  if(s === '' || s === null || s === undefined) return 0;
+  if(typeof s === 'number') return s;
+  s = String(s).trim();
+  if(s.includes(',')) return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+  return parseFloat(s) || 0;
+}
+
+function processRows(rows){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const map = new Map();
+  semOcItems = [];
+  let currentSC = '';
+  for(const row of rows){
+    const c0 = (row[0]||'').toString().trim();
+    if(c0.startsWith('SC:')){ currentSC = c0.replace('SC:','').trim(); continue; }
+    const scNum = (row[COL.sc]||'').toString().trim();
+    if(!scNum) continue; // linha de título/cabeçalho
+    const ordem = (row[COL.ordem]||'').toString().trim();
+    const it = {
+      sc: scNum || currentSC,
+      ordem, fornecedor: row[COL.fornecedor]||'', controle: row[COL.controle]||'',
+      situacao: row[COL.situacao]||'', comprador: row[COL.comprador]||'',
+      dtPrazoOc: row[COL.prazoOc]||'', aprovacao: row[COL.aprovacao]||'',
+      valor: parseNum(row[COL.valor]),
+      quantidade: parseNum(row[COL.quantidade]),
+      prUnit: parseNum(row[COL.prUnit]),
+      material: row[COL.material]||'', obs: row[COL.obs]||'', cond: row[COL.cond]||''
+    };
+    if(!ordem || ordem === '0'){ semOcItems.push({comprador:it.comprador, fornecedor:it.fornecedor}); continue; }
+    if(!map.has(ordem)) map.set(ordem, {ordem, scs:new Set(), fornecedor:'', comprador:'', aprovacao:'', prazoOc:'', cond:'', valor:0, itens:0, items:[]});
+    const g = map.get(ordem);
+    g.scs.add(it.sc); g.itens++; g.valor += it.valor;
+    g.items.push({material: it.material, quantidade: it.quantidade, prUnit: it.prUnit, valor: it.valor, situacao: it.situacao, controle: it.controle, obs: it.obs});
+    if(!g.fornecedor) g.fornecedor = it.fornecedor;
+    if(!g.comprador) g.comprador = it.comprador;
+    if(!g.aprovacao) g.aprovacao = it.aprovacao;
+    if(!g.prazoOc) g.prazoOc = it.dtPrazoOc;
+    if(!g.cond) g.cond = it.cond;
+  }
+  ordens = Array.from(map.values()).map(g => {
+    g.cls = orderClass(g, today);
+    g.items.forEach(it => it.cls = g.cls);
+    const prazoDate = parseBR(g.prazoOc);
+    g.diasRaw = prazoDate ? Math.round((prazoDate - today)/86400000) : null;
+    g.isAdiantamento = REGEX_ADIANT.test(g.cond);
+    const aprovDate = parseBR(g.aprovacao);
+    g.aprovAtraso = !!(aprovDate && prazoDate && aprovDate > prazoDate);
+    return g;
+  });
+  history = saveSnapshot();
+  document.getElementById('status').textContent = `${int0(ordens.length)} ordens de compra carregadas (${int0(semOcItems.length)} itens ainda sem OC / em cotação).`;
+  document.getElementById('app').style.display = 'block';
+  sel.comp.clear(); sel.forn.clear();
+  renderFilters();
+  render();
+}
+
+function itemStatusHtml(it){
+  const sit = (it.situacao||'').toUpperCase();
+  if(sit === 'LIQUIDADO') return `<span>Liquidado</span>`;
+  const label = sit ? sit.charAt(0) + sit.slice(1).toLowerCase() : 'Pendente';
+  return `<span class="badge" style="background:#7c3aed">${label}</span>`;
+}
+
+function renderMS(key, elId, title, values){
+  const el = document.getElementById(elId);
+  const open = el.classList.contains('open');
+  const term = msSearch[key].toLowerCase();
+  const n = sel[key].size;
+  el.innerHTML = `<button class="${n?'on':''}">${title}${n?` (${n})`:' (todos)'} ▾</button>
+    <div class="panel"><input placeholder="Buscar..." value="${msSearch[key].replace(/"/g,'&quot;')}">
+    <div class="acts"><button data-a="all">Marcar visíveis</button><button data-a="none">Limpar</button></div>
+    <div class="opts">${values.filter(v=>v.toLowerCase().includes(term)).map(v=>`<label><input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${sel[key].has(v)?'checked':''}>${v}</label>`).join('')}</div></div>`;
+  if(open) el.classList.add('open');
+  el.querySelector('button').onclick = e => { e.stopPropagation(); document.querySelectorAll('.ms').forEach(m=>m!==el&&m.classList.remove('open')); el.classList.toggle('open'); };
+  el.querySelector('.panel').onclick = e => e.stopPropagation();
+  const inp = el.querySelector('.panel input');
+  inp.oninput = () => { msSearch[key] = inp.value; renderMS(key, elId, title, values); const i2 = document.querySelector('#'+elId+' .panel input'); i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); };
+  el.querySelectorAll('.opts input').forEach(cb => cb.onchange = () => { cb.checked ? sel[key].add(cb.value) : sel[key].delete(cb.value); renderFilters(); render(); });
+  el.querySelectorAll('.acts button').forEach(b => b.onclick = () => {
+    if(b.dataset.a==='none') sel[key].clear();
+    else values.filter(v=>v.toLowerCase().includes(term)).forEach(v=>sel[key].add(v));
+    renderFilters(); render();
+  });
+}
+function renderFilters(){
+  const uniq = f => [...new Set(ordens.map(g => g[f] || (f==='comprador'?'(sem comprador)':'(sem fornecedor)')))].sort((a,b)=>a.localeCompare(b));
+  renderMS('comp','msComp','👤 Compradores', uniq('comprador'));
+  renderMS('forn','msForn','🏭 Fornecedores', uniq('fornecedor'));
+}
+document.addEventListener('click', () => document.querySelectorAll('.ms').forEach(m=>m.classList.remove('open')));
+
+
+let tab = 'T';
+const money0 = v => 'R$ ' + (v>=1e6 ? (v/1e6).toFixed(2).replace('.',',')+' mi' : v>=1e4 ? (v/1e3).toFixed(0)+' mil' : money(v));
+const int0 = v => (v||0).toLocaleString('pt-BR');
+function stackRow(label, segs, max, right){
+  const tot = segs.reduce((t,x)=>t+x.v,0);
+  return `<div class="brow"><div class="lb" title="${label}">${label}</div><div class="track">${segs.filter(x=>x.v>0).map(x=>`<span style="width:${max?x.v/max*100:0}%;background:${x.c}" title="${x.t}: ${int0(x.v)}"></span>`).join('')}</div><div>${right!==undefined?right:int0(tot)}</div></div>`;
+}
+function renderDash(base, list){
+  const el = document.getElementById('dash');
+  const isOpen = g => g.cls!=='entregue' && g.cls!=='cancelada' && g.cls!=='regularizacao';
+  const sum = (a,f) => a.reduce((t,x)=>t+f(x),0);
+  const of = c => list.filter(g=>g.cls===c);
+  const atr = of('atrasado'), verba = of('verba'), parcAtr = of('parcial_atraso'), abertas = list.filter(isOpen);
+  const entPct = list.length ? Math.round(of('entregue').length/list.length*100) : 0;
+  const venc7 = list.filter(g=>g.cls==='andamento' && g.diasRaw!==null && g.diasRaw<=7).length;
+  const desc = [
+    sel.comp.size ? 'Compradores: '+[...sel.comp].join(', ') : 'Todos os compradores',
+    sel.forn.size ? 'Fornecedores: '+(sel.forn.size>3?sel.forn.size+' selecionados':[...sel.forn].join(', ')) : 'Todos os fornecedores',
+    activeFilter.size ? 'Status: '+[...activeFilter].map(k=>CLASS_DEF[k].label).join(' + ') : 'Todos os status'
+  ];
+  const isGeral = !sel.comp.size && !sel.forn.size && !activeFilter.size;
+  // donut (status, base do comprador/fornecedor)
+  const cnt = {}; ORDER.forEach(k=>cnt[k]=base.filter(g=>g.cls===k).length);
+  let acc=0; const stops=[];
+  ORDER.forEach(k=>{ if(!cnt[k]) return; const a=acc/Math.max(base.length,1)*100; acc+=cnt[k]; const b=acc/Math.max(base.length,1)*100; stops.push(`${CLASS_DEF[k].color} ${a}% ${b}%`); });
+  const donut = `<div class="donutwrap"><div class="donut" data-c="${int0(base.length)}" style="background:conic-gradient(${stops.join(',')||'#ccc 0 100%'})"></div>
+    <div class="leg">${ORDER.map(k=>`<div><i style="background:${CLASS_DEF[k].color}"></i>${CLASS_DEF[k].label}: <b>${int0(cnt[k])}</b> (${base.length?Math.round(cnt[k]/base.length*100):0}%)</div>`).join('')}</div></div>`;
+  // compradores (ordens abertas empilhadas por status)
+  const openClasses = ORDER.filter(k=>k!=='entregue'&&k!=='cancelada');
+  const byC = {}; abertas.forEach(g=>{ const k=g.comprador||'(sem comprador)'; (byC[k]=byC[k]||[]).push(g); });
+  const cRows = Object.entries(byC).sort((a,b)=>b[1].length-a[1].length).slice(0,8);
+  const cMax = cRows.length ? cRows[0][1].length : 0;
+  const compHtml = cRows.map(([n,gs])=>stackRow(n, openClasses.map(k=>({v:gs.filter(g=>g.cls===k).length,c:CLASS_DEF[k].color,t:CLASS_DEF[k].label})), cMax)).join('') || '<div class="note">Sem ordens abertas.</div>';
+  // fornecedores: itens em aberto + valor em risco (atrasado+verba) + valor em aberto total
+  const byF = {};
+  abertas.forEach(g=>{
+    const k=g.fornecedor||'(sem fornecedor)';
+    byF[k]=byF[k]||{itens:0,risco:0,aberto:0};
+    byF[k].aberto+=g.valor;
+    g.items.forEach(it=>{ if(it.cls!=='entregue'&&it.cls!=='cancelada') byF[k].itens++; if(it.cls==='atrasado'||it.cls==='verba'||it.cls==='parcial_atraso') byF[k].risco+=it.valor; });
+  });
+  const fRows = Object.entries(byF).sort((a,b)=>b[1].risco-a[1].risco || b[1].itens-a[1].itens).slice(0,8);
+  const fornHtml = fRows.length ? `<table class="subtbl"><thead><tr><th>Fornecedor</th><th>Itens em aberto</th><th>Valor em risco</th></tr></thead><tbody>${
+    fRows.map(([n,d])=>`<tr><td>${n}</td><td>${int0(d.itens)}</td><td style="color:${d.risco>0?'var(--red)':'inherit'}">${money0(d.risco)}</td></tr>`).join('')
+  }</tbody></table>` : '<div class="note">Sem ordens abertas.</div>';
+  const topF = fRows[0];
+  // recebida parcial: valor já entregue vs o que falta (a nível de item dentro das ordens parciais)
+  const parciais = base.filter(g=>g.cls==='parcial_atraso'||g.cls==='parcial_prazo');
+  let pEnt=0, pFalta=0, pEntQ=0, pFaltaQ=0;
+  parciais.forEach(g=>g.items.forEach(it=>{
+    if((it.situacao||'').toUpperCase()==='LIQUIDADO'){ pEnt+=it.valor; pEntQ++; } else { pFalta+=it.valor; pFaltaQ++; }
+  }));
+  const pTot = pEnt+pFalta, pPct = pTot ? Math.round(pEnt/pTot*100) : 0;
+  const parcialHtml = parciais.length ? `
+    <div class="donutwrap" style="margin-bottom:10px">
+      <div class="donut" data-c="${pPct}%" style="background:conic-gradient(var(--green) 0 ${pPct}%, #7c3aed ${pPct}% 100%)"></div>
+      <div class="leg"><div><i style="background:var(--green)"></i>Já entregue: <b>${money0(pEnt)}</b> (${pEntQ} itens)</div>
+      <div><i style="background:#7c3aed"></i>Falta receber: <b>${money0(pFalta)}</b> (${pFaltaQ} itens)</div>
+      <div class="note">${int0(parciais.length)} ordens em recebimento parcial</div></div>
+    </div>
+    <table class="subtbl"><thead><tr><th>Ordem</th><th>Fornecedor</th><th>Falta receber</th></tr></thead><tbody>${
+      [...parciais].sort((a,b)=>{
+        const fa=a.items.filter(i=>(i.situacao||'').toUpperCase()!=='LIQUIDADO').reduce((t,i)=>t+i.valor,0);
+        const fb=b.items.filter(i=>(i.situacao||'').toUpperCase()!=='LIQUIDADO').reduce((t,i)=>t+i.valor,0);
+        return fb-fa;
+      }).slice(0,6).map(g=>{
+        const falta=g.items.filter(i=>(i.situacao||'').toUpperCase()!=='LIQUIDADO').reduce((t,i)=>t+i.valor,0);
+        return `<tr><td>${g.ordem}</td><td>${g.fornecedor}</td><td style="color:#7c3aed">${money0(falta)}</td></tr>`;
+      }).join('')}
+    </tbody></table>` : '<div class="note">Nenhuma ordem em recebimento parcial nos filtros atuais.</div>';
+
+  // aging dos atrasados
+  const buckets = [['1–7 dias',1,7],['8–15 dias',8,15],['16–30 dias',16,30],['31–60 dias',31,60],['> 60 dias',61,1e9]];
+  const bc = buckets.map(([l,a,b])=>[l, atr.filter(g=>g.diasRaw!==null && -g.diasRaw>=a && -g.diasRaw<=b).length]);
+  const bMax = Math.max(...bc.map(x=>x[1]),0);
+  const agingHtml = bc.map(([l,n])=>stackRow(l,[{v:n,c:CLASS_DEF.atrasado.color,t:'Ordens'}],bMax)).join('');
+  // insights
+  const worst = [...atr].filter(g=>g.diasRaw!==null).sort((a,b)=>a.diasRaw-b.diasRaw)[0];
+  const ins = [];
+  ins.push(`<b>${int0(list.length)}</b> ordens na visão atual, somando <b>${money0(sum(list,g=>g.valor))}</b>; <b>${entPct}%</b> já foram entregues.`);
+  if(of('regularizacao').length) ins.push(`<b>${of('regularizacao').length}</b> ordens (${money0(sum(of('regularizacao'),g=>g.valor))}) são <b>regularizações</b> (baixa vinculada a NF já emitida) e foram separadas da análise operacional — não contam como atrasadas, parciais ou entregues.`);
+  if(verba.length) ins.push(`<b>${int0(verba.length)}</b> ordens com <b>verba ultrapassada</b> (${money0(sum(verba,g=>g.valor))}) aguardam aprovação — cobrar.`);
+  if(atr.length) ins.push(`<b>${int0(atr.length)}</b> ordens estão <b>atrasadas</b> (${money0(sum(atr,g=>g.valor))})${worst?`; a mais crítica é a OC <b>${worst.ordem}</b> com <b>${int0(-worst.diasRaw)} dias</b> de atraso (${worst.fornecedor||'sem fornecedor'})`:''}.`);
+  if(of('parcial').length) ins.push(`<b>${of('parcial').length}</b> ordens com recebimento <b>parcial</b> aguardam o restante.`);
+  if(venc7) ins.push(`<b>${int0(venc7)}</b> ordens em andamento vencem nos <b>próximos 7 dias</b>.`);
+  if(topF && topF[1].risco>0) ins.push(`Fornecedor com maior valor em risco: <b>${topF[0]}</b>, com <b>${topF[1].itens}</b> itens em aberto e <b>${money0(topF[1].risco)}</b> em atraso/verba ultrapassada.`);
+  if(parciais.length) ins.push(`Nas ordens de <b>recebimento parcial</b>, <b>${pPct}%</b> do valor já foi entregue (${money0(pEnt)}); faltam <b>${money0(pFalta)}</b>.`);
+  const adiantOpen = base.filter(isAdiantOpen);
+  if(adiantOpen.length) ins.push(`<b>${int0(adiantOpen.length)}</b> ordens (${money0(sum(adiantOpen,g=>g.valor))}) têm condição de <b>adiantamento/antecipado</b> e ainda não foram totalmente entregues.`);
+  const aprovAtraso = base.filter(g=>g.aprovAtraso);
+  if(aprovAtraso.length) ins.push(`⚠️ <b>${int0(aprovAtraso.length)}</b> ordens foram <b>aprovadas depois do prazo</b> da própria OC — vale revisar o processo de aprovação.`);
+  if(!list.length) ins.length=0, ins.push('Nenhuma ordem para os filtros atuais.');
+  // histórico: comparação com o upload anterior (sempre nível empresa, ignora filtros)
+  const prev = history.length>=2 ? history[history.length-2] : null;
+  const curr = history[history.length-1];
+  function delta(c,p,higherIsBad,fmtFn){
+    if(p===undefined||p===null) return '<span class="note">sem dado anterior</span>';
+    const diff = c-p;
+    if(diff===0) return '<span style="color:var(--muted)">— estável</span>';
+    const bad = higherIsBad ? diff>0 : diff<0;
+    const txt = fmtFn ? fmtFn(Math.abs(diff)) : Math.abs(diff);
+    return `<span style="color:${bad?'var(--red)':'var(--green)'};font-weight:700">${diff>0?'▲':'▼'} ${txt}</span>`;
+  }
+  const histRows = [...history].slice(-6).reverse().map(h=>`<tr><td>${fmt(new Date(h.date))}</td><td>${int0(h.totalOrdens)}</td><td>${int0(h.counts.atrasado?.n||0)}</td><td>${money0(h.valorRisco)}</td></tr>`).join('');
+  const histHtml = curr ? `
+    <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:10px">
+      <div class="kpi"><div class="n">${int0(curr.totalOrdens)}</div><div class="l">Ordens hoje</div>${prev?`<div class="note">${delta(curr.totalOrdens,prev.totalOrdens,true,int0)} vs ${fmt(new Date(prev.date))}</div>`:''}</div>
+      <div class="kpi"><div class="n">${int0(curr.counts.atrasado?.n||0)}</div><div class="l">Atrasadas</div>${prev?`<div class="note">${delta(curr.counts.atrasado?.n||0,prev.counts.atrasado?.n||0,true,int0)}</div>`:''}</div>
+      <div class="kpi"><div class="n">${curr.entPct}%</div><div class="l">Entregues</div>${prev?`<div class="note">${delta(curr.entPct,prev.entPct,false,v=>v+'pp')}</div>`:''}</div>
+      <div class="kpi"><div class="n">${money0(curr.valorRisco)}</div><div class="l">Valor em risco</div>${prev?`<div class="note">${delta(curr.valorRisco,prev.valorRisco,true,money0)}</div>`:''}</div>
+    </div>
+    ${history.length>1 ? `<table class="subtbl"><thead><tr><th>Data</th><th>Ordens</th><th>Atrasadas</th><th>Valor em risco</th></tr></thead><tbody>${histRows}</tbody></table>` : '<div class="note">Suba planilhas em dias diferentes para começar a ver a tendência.</div>'}
+  ` : '';
+
+  el.innerHTML = `
+   <div class="dhead"><h2>${isGeral?'📊 Visão geral':'🎯 Visão filtrada'}</h2><div>${desc.join(' · ')}</div></div>
+   <div class="kpis">
+     <div class="kpi"><div class="n">${int0(list.length)}</div><div class="l">Ordens</div></div>
+     <div class="kpi"><div class="n">${money0(sum(list,g=>g.valor))}</div><div class="l">Valor total</div></div>
+     <div class="kpi"><div class="n">${entPct}%</div><div class="l">Entregues</div></div>
+     <div class="kpi"><div class="n" style="color:${CLASS_DEF.verba.color}">${int0(verba.length)}</div><div class="l">Pendente de aprovação</div></div>
+     <div class="kpi"><div class="n" style="color:${CLASS_DEF.atrasado.color}">${int0(atr.length)}</div><div class="l">Atrasadas</div></div>
+     <div class="kpi"><div class="n">${money0(sum(atr.concat(verba).concat(parcAtr),g=>g.valor))}</div><div class="l">Valor em risco</div></div>
+   </div>
+   <div class="dgrid">
+     <div class="dcard"><h3>Distribuição por status</h3>${donut}<div class="note">Considera comprador e fornecedor filtrados (todos os status).</div></div>
+     <div class="dcard"><h3>Insights</h3><ul class="ins">${ins.map(i=>`<li>${i}</li>`).join('')}</ul></div>
+     <div class="dcard"><h3>Ordens abertas por comprador</h3>${compHtml}<div class="note">Barras empilhadas por status (sem entregues/canceladas). Top 8.</div></div>
+     <div class="dcard"><h3>Fornecedores: itens em aberto e valor em risco</h3>${fornHtml}<div class="note">Valor em risco = itens atrasados + verba ultrapassada. Top 8.</div></div>
+     <div class="dcard"><h3>Recebida parcial: entregue vs. falta</h3>${parcialHtml}</div>
+     <div class="dcard"><h3>Envelhecimento dos atrasos</h3>${agingHtml}<div class="note">Ordens atrasadas por faixa de dias após o prazo da OC.</div></div>
+     <div class="dcard" style="grid-column:1/-1"><h3>📈 Tendência entre uploads</h3>${histHtml}<div class="note">Compara com o upload anterior desta planilha. Sempre no nível da empresa toda (ignora filtros de comprador/fornecedor). Fica salvo só neste navegador — abrir em outro computador começa do zero.</div></div>
+   </div>`;
+}
+function setTab(t){
+  tab = t;
+  document.getElementById('tabT').classList.toggle('on', t==='T');
+  document.getElementById('tabD').classList.toggle('on', t==='D');
+  document.getElementById('tblWrap').style.display = t==='T' ? '' : 'none';
+  document.getElementById('dash').style.display = t==='D' ? 'block' : 'none';
+}
+document.getElementById('tabT').onclick = () => setTab('T');
+document.getElementById('tabD').onclick = () => setTab('D');
+
+function render(){
+  const base = ordens.filter(g => (!sel.comp.size || sel.comp.has(g.comprador||'(sem comprador)')) && (!sel.forn.size || sel.forn.has(g.fornecedor||'(sem fornecedor)')));
+  const semOcCount = semOcItems.filter(i => (!sel.comp.size || sel.comp.has(i.comprador||'(sem comprador)')) && (!sel.forn.size || sel.forn.has(i.fornecedor||'(sem fornecedor)'))).length;
+  const counts = {}; ORDER.forEach(k => counts[k] = {n:0, v:0});
+  base.forEach(g => { counts[g.cls].n++; counts[g.cls].v += g.valor; });
+  const adiantAberto = {n:0, v:0};
+  base.forEach(g => { if(isAdiantOpen(g)){ adiantAberto.n++; adiantAberto.v+=g.valor; } });
+
+  const cardsEl = document.getElementById('cards');
+  cardsEl.innerHTML = ORDER.map(k => `
+    <div class="card ${activeFilter.has(k)?'active':''}" data-k="${k}" style="border-left:4px solid ${CLASS_DEF[k].color}">
+      <div class="n">${int0(counts[k].n)}</div>
+      <div class="lbl">${CLASS_DEF[k].label}</div>
+      <div class="v">R$ ${money(counts[k].v)}</div>
+    </div>`).join('') +
+    `<div class="card" style="border-left:4px solid #94a3b8;cursor:default">
+      <div class="n">${int0(semOcCount)}</div><div class="lbl">Sem OC / em cotação</div><div class="v">itens de SC</div>
+    </div>
+    <div class="card ${advOnly?'active':''}" id="cardAdiant" style="border-left:4px solid #ca8a04">
+      <div class="n">${int0(adiantAberto.n)}</div>
+      <div class="lbl">💰 Adiantamento em aberto</div>
+      <div class="v">R$ ${money(adiantAberto.v)}</div>
+    </div>`;
+  cardsEl.querySelectorAll('.card[data-k]').forEach(c => c.onclick = () => {
+    activeFilter.has(c.dataset.k) ? activeFilter.delete(c.dataset.k) : activeFilter.add(c.dataset.k);
+    render();
+  });
+  document.getElementById('cardAdiant').onclick = () => { advOnly = !advOnly; render(); };
+
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const sortBy = document.getElementById('sortSel').value;
+  let list = base.filter(g => !activeFilter.size || activeFilter.has(g.cls));
+  if(advOnly) list = list.filter(isAdiantOpen);
+  if(q) list = list.filter(g => [g.ordem, g.fornecedor, g.comprador].join(' ').toLowerCase().includes(q));
+  list = [...list].sort((a,b) => {
+    if(sortBy==='valor') return b.valor - a.valor;
+    if(sortBy==='ordem') return a.ordem.localeCompare(b.ordem);
+    const da = a.diasRaw ?? 9999, db = b.diasRaw ?? 9999;
+    return da - db;
+  });
+
+  currentList = list;
+  renderDash(base, list);
+  document.getElementById('exportBtn').textContent = `⬇️ Exportar planilha (${int0(list.length)} ordens)`;
+  document.getElementById('tbody').innerHTML = list.map(g => {
+    const diasTxt = g.diasRaw===null ? '—' : (g.diasRaw < 0 ? `${int0(-g.diasRaw)}d atraso` : `${int0(g.diasRaw)}d restantes`);
+    const diasColor = g.diasRaw!==null && g.diasRaw < 0 ? 'var(--red)' : 'var(--text)';
+    const isOpen = expanded.has(g.ordem);
+    const mainRow = `<tr class="main-row" data-ordem="${g.ordem}">
+      <td><span class="chev ${isOpen?'open':''}">▶</span><strong>${g.ordem}</strong></td>
+      <td><span class="badge" style="background:${CLASS_DEF[g.cls].color}">${CLASS_DEF[g.cls].label}</span></td>
+      <td>${g.fornecedor}</td>
+      <td>${g.comprador}</td>
+      <td>${[...g.scs].join(', ')}</td>
+      <td>${int0(g.itens)}</td>
+      <td>${g.aprovAtraso ? `<span style="background:#ff1744;color:#fff;padding:2px 7px;border-radius:6px;font-weight:700" title="Aprovada depois do prazo da OC">⚠️ ${g.aprovacao}</span>` : (g.aprovacao || '—')}</td>
+      <td>${g.prazoOc || '—'}</td>
+      <td style="color:${diasColor}">${diasTxt}</td>
+      <td>${money(g.valor)}</td>
+    </tr>`;
+    if(!isOpen) return mainRow;
+    const detailRow = `<tr class="detail-row"><td colspan="10">
+      <table class="subtbl"><thead><tr>
+        <th>Material</th><th>Qtd.</th><th>Valor unitário (R$)</th><th>Valor total (R$)</th><th>Status do item</th>
+      </tr></thead><tbody>
+      ${g.items.map(it => `<tr>
+        <td>${it.material}</td>
+        <td>${it.quantidade.toLocaleString('pt-BR')}</td>
+        <td>${money(it.prUnit)}</td>
+        <td>${money(it.valor)}</td>
+        <td>${itemStatusHtml(it)}</td>
+      </tr>`).join('')}
+      </tbody></table>
+    </td></tr>`;
+    return mainRow + detailRow;
+  }).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--muted)">Nenhuma ordem encontrada.</td></tr>';
+
+  document.querySelectorAll('tr.main-row').forEach(tr => tr.onclick = () => {
+    const ord = tr.dataset.ordem;
+    expanded.has(ord) ? expanded.delete(ord) : expanded.add(ord);
+    render();
+  });
+}
+
+document.getElementById('clearSt').onclick = () => { activeFilter.clear(); advOnly=false; render(); };
+document.getElementById('exportBtn').onclick = () => {
+  if(!currentList.length){ alert('Nada para exportar com os filtros atuais.'); return; }
+  const resumo = currentList.map(g => ({
+    'Ordem':g.ordem, 'Status':CLASS_DEF[g.cls].label, 'Fornecedor':g.fornecedor, 'Comprador':g.comprador,
+    'SC(s)':[...g.scs].join(', '), 'Itens':g.itens, 'Aprovação':g.aprovacao, 'Aprovada após prazo?':g.aprovAtraso?'SIM':'não', 'Prazo OC':g.prazoOc,
+    'Dias':g.diasRaw===null?'':g.diasRaw, 'Valor total (R$)':g.valor }));
+  const itens = [];
+  currentList.forEach(g => g.items.forEach(it => itens.push({
+    'Ordem':g.ordem, 'Status da ordem':CLASS_DEF[g.cls].label, 'Fornecedor':g.fornecedor, 'Comprador':g.comprador,
+    'Prazo OC':g.prazoOc, 'Material':it.material, 'Quantidade':it.quantidade,
+    'Valor unitário (R$)':it.prUnit, 'Valor total (R$)':it.valor, 'Situação do item':it.situacao || 'PENDENTE' })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumo), 'Ordens');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(itens), 'Itens');
+  XLSX.writeFile(wb, 'follow-up-filtrado-' + new Date().toISOString().slice(0,10) + '.xlsx');
+};
+document.getElementById('q').oninput = render;
+document.getElementById('sortSel').onchange = render;
+document.getElementById('file').onchange = e => e.target.files[0] && handleFile(e.target.files[0]);
+const dz = document.getElementById('dropZone');
+dz.ondragover = e => { e.preventDefault(); dz.style.borderColor = 'var(--accent)'; };
+dz.ondragleave = () => dz.style.borderColor = 'var(--border)';
+dz.ondrop = e => { e.preventDefault(); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
+</script>
+</body>
+</html>
