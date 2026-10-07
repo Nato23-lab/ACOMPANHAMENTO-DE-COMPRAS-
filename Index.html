@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Follow-up de Compras</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#ffffff; --text:#1a1d23; --muted:#6b7280; --border:#e5e7eb;
+  --accent:#4f46e5; --red:#dc2626; --amber:#d97706; --green:#16a34a; --slate:#64748b; --blue:#2563eb;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#14161c;--card:#1e2129;--text:#eceef1;--muted:#9aa1ad;--border:#2c3038;}
+}
+:root[data-theme="dark"]{--bg:#14161c;--card:#1e2129;--text:#eceef1;--muted:#9aa1ad;--border:#2c3038;}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.4rem;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:.85rem;margin-bottom:18px}
+.upload{border:2px dashed var(--border);border-radius:14px;padding:26px;text-align:center;background:var(--card);cursor:pointer}
+.upload:hover{border-color:var(--accent)}
+.upload input{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .1s}
+.card:hover{transform:translateY(-2px)}
+.card.active{outline:2px solid var(--accent)}
+.card .n{font-size:1.5rem;font-weight:700}
+.card .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.card .v{font-size:.72rem;color:var(--muted);margin-top:2px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}
+.xbtn{padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:.85rem}
+.xbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.ms{position:relative}
+.ms>button{padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:.85rem}
+.ms>button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.ms .panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:20;width:300px;max-width:88vw;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.ms.open .panel{display:block}
+.ms .panel input{width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:6px}
+.ms .acts{display:flex;gap:6px;margin-bottom:6px}
+.ms .acts button{flex:1;padding:5px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:.75rem}
+.ms .opts{max-height:260px;overflow-y:auto}
+.ms label{display:flex;gap:8px;align-items:center;padding:5px 6px;font-size:.8rem;cursor:pointer;border-radius:6px}
+.ms label:hover{background:color-mix(in srgb, var(--accent) 8%, transparent)}
+input#q{flex:1;min-width:180px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+select#sortSel{padding:9px 10px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+.tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.82rem;white-space:nowrap}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{position:sticky;top:0;background:var(--card);color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase}
+tr:last-child td{border-bottom:none}
+tr.main-row{cursor:pointer}
+tr.main-row:hover{background:color-mix(in srgb, var(--accent) 6%, transparent)}
+.chev{display:inline-block;transition:transform .15s;color:var(--muted);margin-right:6px}
+.chev.open{transform:rotate(90deg)}
+tr.detail-row td{padding:0;background:color-mix(in srgb, var(--text) 3%, transparent)}
+table.subtbl{width:100%;border-collapse:collapse;font-size:.78rem;table-layout:fixed}
